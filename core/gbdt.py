@@ -1,14 +1,5 @@
 import numpy as np
-
-class TreeNode:
-    def __init__(self):
-        self.left = None
-        self.right = None
-        self.feature = None   # 分裂特征索引
-        self.threshold = None   # 分裂阈值
-        self.weight = None   # 叶片点权重(只有叶节点才有)
-        
-
+from core.tree import TreeNode
 
 class SimpleGBDT:
     def __init__(self, n_trees=100, max_depth=5, lr=0.1, min_samples=2):
@@ -167,17 +158,3 @@ class SimpleGBDT:
                 y_pred[i] += self.lr * self._predict_single(tree, x)
         return y_pred
             
-if __name__ == "__main__":
-    X = np.array([[1, 2],
-              [3, 4],
-              [5, 6],
-              [7, 8],
-              [9, 10],
-              [11, 12]])
-    y = np.array([1.2, 4.1, 4.9, 8.3, 10.1, 10.8])
-    
-    model = SimpleGBDT(n_trees=5, max_depth=3, lr=0.1)
-    model.fit(X, y)
-    pred = model.predict(X)
-    print("预测值:", pred)
-    print("真实值:", y)
