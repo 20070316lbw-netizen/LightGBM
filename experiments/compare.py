@@ -1,9 +1,9 @@
-import numpy as np
 import lightgbm as lgb
-from core import SimpleGBDT
 from sklearn.datasets import load_diabetes
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+
+from gbdt import SimpleGBDT
 
 # 读数据
 data = load_diabetes()
