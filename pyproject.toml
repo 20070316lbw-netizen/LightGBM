@@ -1,8 +1,9 @@
 [project]
 name = "gbdt"
 version = "0.1.0"
-description = "Toy from-scratch GBDT implementation compared against LightGBM"
-requires-python = ">=3.10"
+description = "个人从零实现的 GBDT 回归器: 基于二阶泰勒展开的梯度提升树模型, 可用于在量化因子上训练预测模型"
+readme = "README.md"
+requires-python = ">=3.12"
 dependencies = [
     "lightgbm>=4.7.0",
     "numpy>=2.2.6",
@@ -22,7 +23,7 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
