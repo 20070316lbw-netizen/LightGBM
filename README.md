@@ -46,11 +46,27 @@ model.fit(X, y)
 pred = model.predict(X)
 ```
 
+### 进阶用法: L2 正则 + 早停
+
+```python
+model = SimpleGBDT(n_trees=200, max_depth=3, lr=0.1, min_samples=2, lambda_l2=1.0)
+model.fit(X_train, y_train, X_val=X_val, y_val=y_val, early_stopping_rounds=10)
+
+pred = model.predict(X_val)
+print(model.best_iteration, model.best_val_loss)  # 实际保留的树数 / 验证集上的最优 MSE
+```
+
+- `lambda_l2`（默认 `0.0`，不传即无正则）压缩叶权重，越大越保守，可以缓解过拟合。
+- 传入 `X_val`/`y_val` 后,每轮都会在验证集上算一次 MSE 并记录历史最优;
+  如果再传 `early_stopping_rounds`,连续这么多轮没有刷新最优就提前停止训练。
+  不管有没有触发早停,只要给了验证集,训练结束后都会把 `self.trees` 回滚到
+  验证集表现最好的那一轮（`best_iteration`），避免带着后面过拟合的树。
+
 ## 模型
 
 | 模块 | 内容 | 备注 |
 | --- | --- | --- |
-| `gbdt.gbdt` | `SimpleGBDT` | MSE 损失下的梯度提升树: 每轮对当前残差 `g = y_pred - y`（`h` 恒为 1）建一棵树, 叶权重 `w = -G/H`, 分裂点按二阶泰勒展开的 `Gain = 0.5·(G_L²/H_L + G_R²/H_R − (G_L+G_R)²/(H_L+H_R))` 枚举选最大; `n_trees`/`max_depth`/`lr`/`min_samples` 分别控制迭代轮数、树深、学习率、叶节点最小分裂样本数 |
+| `gbdt.gbdt` | `SimpleGBDT` | MSE 损失下的梯度提升树: 每轮对当前残差 `g = y_pred - y`（`h` 恒为 1）建一棵树, 叶权重 `w = -G/(H+λ)`, 分裂点按二阶泰勒展开的 `Gain = 0.5·(G_L²/(H_L+λ) + G_R²/(H_R+λ) − (G_L+G_R)²/(H_L+H_R+λ))` 枚举选最大（`λ` 即 `lambda_l2`, 默认 0 时退化为无正则的原始公式）; `n_trees`/`max_depth`/`lr`/`min_samples`/`lambda_l2` 分别控制迭代轮数、树深、学习率、叶节点最小分裂样本数、叶权重 L2 正则系数; `fit` 可选传入 `X_val`/`y_val`/`early_stopping_rounds` 做早停,停止后模型会回滚到验证集最优的那一轮（`best_iteration`/`best_val_loss` 属性可查) |
 | `gbdt.tree` | `TreeNode` | 树节点: `feature`/`threshold` 是内部节点的分裂条件, `weight` 只在叶节点上有值 |
 
 完整数学推导见 [`notes/`](notes/)（`01_gbdt_math.md` 是从二阶泰勒展开到

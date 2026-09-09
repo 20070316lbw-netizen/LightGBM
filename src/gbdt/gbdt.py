@@ -5,14 +5,14 @@ from gbdt.tree import TreeNode
 
 class SimpleGBDT:
     def __init__(self, n_trees=100, max_depth=5, lr=0.1, min_samples=2, lambda_l2=0.0):
-        self.n_trees = n_trees
-        self.max_depth = max_depth
-        self.lr = lr
-        self.trees = []
-        self.min_samples = min_samples
-        self.lambda_l2 = lambda_l2   # 叶权重的 L2 正则系数
+        self.n_trees = n_trees   # boosting 轮数,即最终有多少棵树
+        self.max_depth = max_depth   # 单棵树的最大深度
+        self.lr = lr   # 学习率,每棵树的输出乘以它再累加到预测值上
+        self.trees = []   # 已训练好的树,按顺序存放,predict 时依次遍历累加
+        self.min_samples = min_samples   # 节点样本数低于这个值就不再分裂,直接变叶子
+        self.lambda_l2 = lambda_l2   # 叶权重的 L2 正则系数,越大叶权重越被压向 0
         self.best_iteration = None   # 早停后回滚到的最优轮数(树的数量)
-        self.best_val_loss = None
+        self.best_val_loss = None   # 早停过程中验证集上出现过的最小 loss
 
     def _grad(self, y, y_pred):
         return y_pred - y   # 这是 g_i
@@ -21,6 +21,7 @@ class SimpleGBDT:
         return np.ones_like(y)   # h_i = 1
 
     def _leaf_weight(self, g, h):
+        # 叶权重公式 w = -G/(H+lambda_l2);lambda_l2=0 时退化为无正则的 -G/H
         return -g.sum() / (h.sum() + self.lambda_l2)
 
     def _gain(self, G_L, H_L, G_R, H_R):   # 这里填公式
@@ -155,6 +156,7 @@ class SimpleGBDT:
             self.trees = self.trees[: self.best_iteration]
 
     def predict(self, X):
+        # 每棵树各自预测一个值,乘以学习率后逐棵累加,得到最终预测(与 fit 里更新 y_pred 的方式一致)
         y_pred = np.zeros(X.shape[0])
         for tree in self.trees:
             for i, x in enumerate(X):
@@ -162,6 +164,8 @@ class SimpleGBDT:
         return y_pred
 
     def _predict_single(self, node, x):
+        # 从根节点递归往下走:走到叶节点(weight 不为 None)就返回该叶的权重,
+        # 否则按 feature/threshold 决定往左还是往右子树继续走
         if node.weight is not None:
             return node.weight
         else:
