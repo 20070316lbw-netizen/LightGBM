@@ -4,12 +4,15 @@ from gbdt.tree import TreeNode
 
 
 class SimpleGBDT:
-    def __init__(self, n_trees=100, max_depth=5, lr=0.1, min_samples=2):
+    def __init__(self, n_trees=100, max_depth=5, lr=0.1, min_samples=2, lambda_l2=0.0):
         self.n_trees = n_trees
         self.max_depth = max_depth
         self.lr = lr
         self.trees = []
         self.min_samples = min_samples
+        self.lambda_l2 = lambda_l2   # 叶权重的 L2 正则系数
+        self.best_iteration = None   # 早停后回滚到的最优轮数(树的数量)
+        self.best_val_loss = None
 
     def _grad(self, y, y_pred):
         return y_pred - y   # 这是 g_i
@@ -17,12 +20,19 @@ class SimpleGBDT:
     def _hess(self, y, y_pred):
         return np.ones_like(y)   # h_i = 1
 
+    def _leaf_weight(self, g, h):
+        return -g.sum() / (h.sum() + self.lambda_l2)
+
     def _gain(self, G_L, H_L, G_R, H_R):   # 这里填公式
         # 防止除以0
-        if H_L == 0 or H_R == 0:
+        if H_L + self.lambda_l2 == 0 or H_R + self.lambda_l2 == 0:
             return 0
 
-        Gain = 0.5 * (G_L**2 / H_L + G_R**2 / H_R - (G_L + G_R) ** 2 / (H_L + H_R))
+        Gain = 0.5 * (
+            G_L**2 / (H_L + self.lambda_l2)
+            + G_R**2 / (H_R + self.lambda_l2)
+            - (G_L + G_R) ** 2 / (H_L + H_R + self.lambda_l2)
+        )
         return Gain
 
     def _best_split(self, X, g, h):   # 枚举所有特征和阈值,找出最大 Gain 的分裂点
@@ -64,25 +74,25 @@ class SimpleGBDT:
         return best_feature, best_threshold, best_gain
 
     def _build_tree(self, X, g, h, depth):   # 递归建树
-        # 1. 如果样本太少：→ 创建叶节点，weight = -g.sum() / h.sum()，return
+        # 1. 如果样本太少：→ 创建叶节点，weight = -g.sum() / (h.sum()+lambda_l2)，return
         if len(g) < self.min_samples:
             node = TreeNode()
-            node.weight = -g.sum() / h.sum()
+            node.weight = self._leaf_weight(g, h)
             return node
 
-        # 2. 如果深度达到上限：→ 创建叶节点，weight = -g.sum() / h.sum()，return
+        # 2. 如果深度达到上限：→ 创建叶节点，weight = -g.sum() / (h.sum()+lambda_l2)，return
         if depth >= self.max_depth:
             node = TreeNode()
-            node.weight = -g.sum() / h.sum()
+            node.weight = self._leaf_weight(g, h)
             return node
 
         # 3. 找最优分裂点
         feature, threshold, best_gain = self._best_split(X, g, h)
 
-        # 4. 如果 best_gain <= 0： → 创建叶节点，weight = -g.sum() / h.sum()，return
+        # 4. 如果 best_gain <= 0： → 创建叶节点，weight = -g.sum() / (h.sum()+lambda_l2)，return
         if best_gain <= 0:
             node = TreeNode()
-            node.weight = -g.sum() / h.sum()
+            node.weight = self._leaf_weight(g, h)
             return node
 
         # 5. 用 mask 把样本分成左右两组
@@ -101,7 +111,7 @@ class SimpleGBDT:
         node.right = self._build_tree(X_right, g_right, h_right, depth + 1) # type: ignore
         return node
 
-    def fit(self, X, y):
+    def fit(self, X, y, X_val=None, y_val=None, early_stopping_rounds=None):
         """
         1. 初始化预测值 y_pred = 全0
         2. 循环 n_trees 次：
@@ -109,15 +119,40 @@ class SimpleGBDT:
             b. 建一棵树
             c. 把树存进 self.trees
             d. 用 lr 缩放后更新 y_pred
+        3. 如果给了验证集(X_val/y_val)：每轮结束后算一次验证集 MSE，
+           记录历史最优轮数；若连续 early_stopping_rounds 轮没有改善就停止，
+           最后把 self.trees 回滚到最优轮数,避免带着过拟合的树。
         """
         y_pred = np.zeros_like(y, dtype=float)
 
-        for _ in range(self.n_trees):
+        use_val = X_val is not None and y_val is not None
+        if use_val:
+            y_val_pred = np.zeros_like(y_val, dtype=float)
+            rounds_no_improve = 0
+
+        for i in range(self.n_trees):
             g = self._grad(y, y_pred)
             h = self._hess(y, y_pred)
             tree = self._build_tree(X, g, h, depth=0)
             self.trees.append(tree)
             y_pred += self.lr * np.array([self._predict_single(tree, x) for x in X])
+
+            if use_val:
+                y_val_pred += self.lr * np.array([self._predict_single(tree, x) for x in X_val])
+                val_loss = np.mean((y_val - y_val_pred) ** 2)
+
+                if self.best_val_loss is None or val_loss < self.best_val_loss:
+                    self.best_val_loss = val_loss
+                    self.best_iteration = i + 1
+                    rounds_no_improve = 0
+                else:
+                    rounds_no_improve += 1
+                    if early_stopping_rounds is not None and rounds_no_improve >= early_stopping_rounds:
+                        break
+
+        if use_val:
+            # 回滚到验证集上表现最好的那一轮，丢弃之后过拟合的树
+            self.trees = self.trees[: self.best_iteration]
 
     def predict(self, X):
         y_pred = np.zeros(X.shape[0])
