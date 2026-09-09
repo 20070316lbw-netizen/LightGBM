@@ -148,7 +148,11 @@ class SimpleGBDT:
                     rounds_no_improve = 0
                 else:
                     rounds_no_improve += 1
-                    if early_stopping_rounds is not None and rounds_no_improve >= early_stopping_rounds:
+                    stop_now = (
+                        early_stopping_rounds is not None
+                        and rounds_no_improve >= early_stopping_rounds
+                    )
+                    if stop_now:
                         break
 
         if use_val:

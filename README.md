@@ -87,6 +87,8 @@ uv run pytest -v
 ```
 
 测试全部基于手造的小数组验证梯度、海森、分裂增益、建树、拟合/预测端到端
-（包括一个 `lr` 从未生效的历史 bug 的回归测试），不需要真实网络也能跑；
-CI（见 `.github/workflows/ci.yml`）在 push/PR 到 `main`/`master` 时会跑
-同样这两步。
+（包括一个 `lr` 从未生效的历史 bug 的回归测试）、L2 正则（叶权重/分裂增益
+公式、`lambda_l2` 越大越压缩权重）、早停（无验证集时行为不变、有验证集时
+记录 `best_iteration`/`best_val_loss` 并回滚、`early_stopping_rounds`
+触发后提前停止），不需要真实网络也能跑；CI（见 `.github/workflows/ci.yml`）
+在 push/PR 到 `main`/`master` 时会跑同样这两步。
