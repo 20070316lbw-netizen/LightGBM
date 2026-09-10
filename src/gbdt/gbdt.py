@@ -139,8 +139,8 @@ class SimpleGBDT:
             y_pred += self.lr * np.array([self._predict_single(tree, x) for x in X])
 
             if use_val:
-                y_val_pred += self.lr * np.array([self._predict_single(tree, x) for x in X_val])
-                val_loss = np.mean((y_val - y_val_pred) ** 2)
+                y_val_pred += self.lr * np.array([self._predict_single(tree, x) for x in X_val]) # type: ignore
+                val_loss = np.mean((y_val - y_val_pred) ** 2) # type: ignore
 
                 if self.best_val_loss is None or val_loss < self.best_val_loss:
                     self.best_val_loss = val_loss

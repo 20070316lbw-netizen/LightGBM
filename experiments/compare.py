@@ -7,7 +7,7 @@ from gbdt import SimpleGBDT
 
 # 读数据
 data = load_diabetes()
-X, y = data.data, data.target
+X, y = data.data, data.target # type: ignore
 
 # 划分训练集和测试集
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -23,4 +23,4 @@ lgb_model.fit(X_train, y_train)
 lgb_pred = lgb_model.predict(X_test)
 
 print("我们的MSE:  ", round(mean_squared_error(y_test, our_pred), 2))
-print("lightgbm MSE:", round(mean_squared_error(y_test, lgb_pred), 2))
+print("lightgbm MSE:", round(mean_squared_error(y_test, lgb_pred), 2)) # type: ignore

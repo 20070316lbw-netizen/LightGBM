@@ -2,16 +2,17 @@
 
 [![CI](https://github.com/20070316lbw-netizen/LightGBM/actions/workflows/ci.yml/badge.svg)](https://github.com/20070316lbw-netizen/LightGBM/actions/workflows/ci.yml)
 
-个人从零实现的 GBDT（梯度提升树）回归器，最初是为了搞懂 LightGBM 背后的
-数学原理，现在打包成一个能在其他量化项目里直接 `uv add` 的模型包。
+个人的 GBDT（梯度提升树）回归器，打包成一个能在其他量化项目里直接 `uv add` 的模型包。
 
-**这个仓库只做一件事：给定训练数据 `(X, y)`，用二阶泰勒展开（梯度 + 海森）
-拟合一个回归树集成模型，提供 `fit` / `predict`。** 不做任何数据抓取、
-清洗、存储或因子计算——这些留给
+**给定训练数据 `(X, y)`，用二阶泰勒展开（梯度 + 海森）
+拟合一个回归树集成模型，提供 `fit` / `predict`。** 
+
+不包含任何数据抓取、
+清洗、存储或因子计算. 这些内容在: 
 [`sources`](https://github.com/20070316lbw-netizen/sources)、
 [`load`](https://github.com/20070316lbw-netizen/load)、
 [`momfactor`](https://github.com/20070316lbw-netizen/momfactor)，`gbdt`
-与它们是平级关系而非上下游，不依赖、不 import 它们中的任何一个；调用方
+中已经实现.本项目不依赖、不 import 它们中的任何一个；调用方
 传入的 `X`/`y` 可以来自任何地方（比如用 `momfactor` 算出来的多个因子拼成
 特征矩阵，`y` 是对应的未来收益）。
 

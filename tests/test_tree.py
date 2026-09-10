@@ -14,10 +14,10 @@ def test_tree_node_fields_are_independent():
     left = TreeNode()
     right = TreeNode()
     node = TreeNode()
-    node.left = left
-    node.right = right
-    node.feature = 2
-    node.threshold = 1.5
+    node.left = left # type: ignore
+    node.right = right # type: ignore
+    node.feature = 2 # type: ignore
+    node.threshold = 1.5 # type: ignore
 
     assert node.left is left
     assert node.right is right

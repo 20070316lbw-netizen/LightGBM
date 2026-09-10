@@ -262,7 +262,7 @@ def test_fit_with_validation_data_tracks_best_iteration(val_split_data):
 
     assert model.best_iteration is not None
     assert 1 <= model.best_iteration <= 30
-    assert model.best_val_loss >= 0
+    assert model.best_val_loss >= 0 # type: ignore
     # 即使没有触发早停, 也会回滚到验证集最优的那一轮
     assert len(model.trees) == model.best_iteration
 
